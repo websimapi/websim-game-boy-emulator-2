@@ -15,17 +15,23 @@ export class GameBoy {
         this.renderer = renderer;
         this.input = input;
         
-        // Initialize components
-        this.interrupts = new Interrupts();
+        // Initialize components in the correct order with proper references
+        this.interrupts = new Interrupts(); // Create interrupts first
         this.memory = new Memory(romData, this.interrupts, input);
-        this.ppu = new PPU(this.memory, renderer);
+        this.interrupts.memory = this.memory; // Now connect memory to interrupts
         this.timer = new Timer(this.memory, this.interrupts);
+        this.ppu = new PPU(this.memory, renderer);
         this.cpu = new CPU(this.memory, this.interrupts);
         
         // Initialize state
         this.halted = false;
         this.stopped = false;
+        this.totalCycles = 0;
         
+        // Debug information
+        this.lastExecutedInstruction = null;
+        
+        // Log initialization
         console.log(`Loaded ROM: ${this.memory.cartridgeTitle}`);
         console.log(`Cartridge Type: ${this.memory.cartridgeType.toString(16)}`);
         console.log(`ROM Size: ${this.memory.romSize.toString(16)}`);
@@ -34,29 +40,49 @@ export class GameBoy {
     
     // Run a single machine cycle
     step() {
-        // Handle interrupts
-        let cycles = this.cpu.handleInterrupts();
-        
-        // If no interrupt was serviced or if CPU is halted, execute the next instruction
-        if (!this.halted && !this.stopped && cycles === 0) {
-            cycles = this.cpu.executeInstruction();
-        } else if (this.halted) {
-            // If CPU is halted, we still need to count cycles
-            cycles = 4;
+        try {
+            // Handle interrupts
+            let cycles = this.interrupts.handle(this.cpu);
             
-            // Check if an interrupt occurred to unhalt the CPU
-            if (this.memory.readByte(0xFF0F) & this.memory.readByte(0xFFFF) & 0x1F) {
-                this.halted = false;
+            // If no interrupt was serviced or if CPU is halted, execute the next instruction
+            if (!this.halted && !this.stopped && cycles === 0) {
+                // Save information about the current instruction for debugging
+                const pc = this.cpu.pc;
+                const opcode = this.memory.readByte(pc);
+                
+                cycles = this.cpu.executeInstruction();
+                
+                // Save the executed instruction info for debugging
+                this.lastExecutedInstruction = {
+                    pc: pc,
+                    opcode: opcode,
+                    cycles: cycles,
+                    // Add any additional info you want for debugging
+                };
+            } else if (this.halted) {
+                // If CPU is halted, we still need to count cycles
+                cycles = 4;
+                
+                // Check if an interrupt occurred to unhalt the CPU
+                if (this.memory.readByte(0xFF0F) & this.memory.readByte(0xFFFF) & 0x1F) {
+                    this.halted = false;
+                }
             }
+            
+            // Update timers
+            this.timer.update(cycles);
+            
+            // Update graphics
+            this.ppu.update(cycles);
+            
+            // Track total cycles for debugging
+            this.totalCycles += cycles;
+            
+            return cycles;
+        } catch (error) {
+            console.error(`Error in step() at PC=${this.cpu.pc.toString(16)}: ${error.message}`);
+            throw error; // Re-throw to be caught by the main loop
         }
-        
-        // Update timers
-        this.timer.update(cycles);
-        
-        // Update graphics
-        this.ppu.update(cycles);
-        
-        return cycles;
     }
     
     // Run the emulation for a single frame
@@ -64,11 +90,52 @@ export class GameBoy {
         let cyclesThisFrame = 0;
         
         while (cyclesThisFrame < CYCLES_PER_FRAME) {
-            cyclesThisFrame += this.step();
+            const stepCycles = this.step();
+            cyclesThisFrame += stepCycles;
         }
         
         // After the frame is complete, render the screen
         this.renderer.render();
+    }
+    
+    // Get instruction context for debugging
+    getInstructionContext() {
+        try {
+            const pc = this.cpu.pc;
+            const opcode = this.memory.readByte(pc);
+            
+            // Map common opcodes to their names for debugging
+            const opcodeNames = {
+                0x00: "NOP",
+                0x01: "LD BC,nn",
+                0x06: "LD B,n",
+                0x0E: "LD C,n",
+                0x11: "LD DE,nn",
+                0x16: "LD D,n",
+                0x1E: "LD E,n",
+                0x21: "LD HL,nn",
+                0x26: "LD H,n",
+                0x2E: "LD L,n",
+                0x31: "LD SP,nn",
+                0x3E: "LD A,n",
+                0x76: "HALT",
+                0xC3: "JP nn",
+                0xC9: "RET",
+                0xCD: "CALL nn",
+                0xF3: "DI",
+                0xFB: "EI"
+                // Add more as needed
+            };
+            
+            return {
+                opcode: opcode,
+                name: opcodeNames[opcode] || null,
+                pc: pc
+            };
+        } catch (error) {
+            console.error("Error getting instruction context:", error);
+            return null;
+        }
     }
     
     // Get debug information
@@ -78,13 +145,23 @@ export class GameBoy {
             sp: this.cpu.sp,
             a: this.cpu.a,
             f: this.cpu.f,
+            fZero: this.cpu.fZero,
+            fSubtract: this.cpu.fSubtract,
+            fHalfCarry: this.cpu.fHalfCarry,
+            fCarry: this.cpu.fCarry,
             b: this.cpu.b,
             c: this.cpu.c,
             d: this.cpu.d,
             e: this.cpu.e,
             h: this.cpu.h,
             l: this.cpu.l,
-            lcdStatus: this.memory.readByte(0xFF41)
+            lcdStatus: this.memory.readByte(0xFF41),
+            lcdMode: this.memory.readByte(0xFF41) & 0x03,
+            lcdLine: this.memory.readByte(0xFF44),
+            timer: this.memory.readByte(0xFF05),
+            divider: this.memory.readByte(0xFF04),
+            totalCycles: this.totalCycles,
+            lastInstruction: this.lastExecutedInstruction
         };
     }
 }

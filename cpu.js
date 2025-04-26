@@ -3,6 +3,7 @@ export class CPU {
     constructor(memory, interrupts) {
         this.memory = memory;
         this.interrupts = interrupts;
+        this.halted = false;
         
         // Initialize registers
         this.initializeRegisters();
@@ -60,18 +61,25 @@ export class CPU {
     
     // Handle interrupts
     handleInterrupts() {
+        if (!this.interrupts) {
+            console.error("CPU: Interrupts not initialized");
+            return 0;
+        }
         return this.interrupts.handle(this);
     }
     
     // CPU instruction execution
     executeInstruction() {
-        // Fetch opcode
-        const opcode = this.memory.readByte(this.pc++);
-        
-        // Track cycles this instruction takes
-        let cycles = 0;
-        
         try {
+            // Fetch opcode
+            const opcode = this.memory.readByte(this.pc++);
+            
+            // Track cycles this instruction takes
+            let cycles = 0;
+            
+            // Log the current instruction (for debugging)
+            console.debug(`Executing opcode 0x${opcode.toString(16).padStart(2, '0')} at PC: 0x${(this.pc - 1).toString(16).padStart(4, '0')}`);
+            
             // Execute instruction
             switch (opcode) {
                 // NOP
@@ -251,13 +259,11 @@ export class CPU {
                     cycles = 4;
                     break;
             }
+            
+            return cycles;
         } catch (error) {
-            console.error(`Error executing opcode 0x${opcode.toString(16).padStart(2, '0')} at PC: 0x${(this.pc - 1).toString(16).padStart(4, '0')}`);
-            console.error(error);
-            // Return a default cycle count to prevent freezing
-            cycles = 4;
+            console.error(`CPU Error: ${error.message} at PC=0x${(this.pc - 1).toString(16)}`);
+            throw error; // Re-throw to be caught by main loop
         }
-        
-        return cycles;
     }
 }

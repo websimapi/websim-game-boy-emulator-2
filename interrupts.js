@@ -1,8 +1,8 @@
 // Interrupt handling for Game Boy emulator
 export class Interrupts {
-    constructor(memory) {
+    constructor() {
         this.enabled = false;
-        this.memory = memory;
+        this.memory = null; // Will be set after Memory is created
     }
     
     enable() {
@@ -15,6 +15,11 @@ export class Interrupts {
     
     // Request an interrupt
     requestInterrupt(interrupt) {
+        if (!this.memory) {
+            console.error("Interrupts: Memory not initialized");
+            return;
+        }
+        
         // Set the corresponding bit in IF register (0xFF0F)
         const currentIF = this.memory.readByte(0xFF0F);
         this.memory.writeByte(0xFF0F, currentIF | (1 << interrupt));
@@ -22,7 +27,7 @@ export class Interrupts {
     
     // Handle interrupts
     handle(cpu) {
-        if (!this.enabled) {
+        if (!this.enabled || !this.memory) {
             return 0;
         }
         

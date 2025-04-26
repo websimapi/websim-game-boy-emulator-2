@@ -96,10 +96,55 @@
         .file-input {
             margin-top: 20px;
         }
-        .debug {
+        .debug-container {
             margin-top: 20px;
-            width: 100%;
-            text-align: left;
+            width: 90%;
+            max-width: 800px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .debug-controls button {
+            margin-left: 5px;
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .debug-controls button:hover {
+            background-color: #45a049;
+        }
+        .debug-output {
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            background-color: #333;
+            color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .error {
+            color: #ff5555;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ffcc00;
+        }
+        .info {
+            color: #55aaff;
+        }
+        .success {
+            color: #55ff55;
         }
     </style>
 </head>
@@ -136,11 +181,19 @@
         <button id="start-btn">Start Game</button>
         <button id="pause-btn">Pause</button>
         <button id="reset-btn">Reset</button>
+        <button id="step-btn">Single Step</button>
     </div>
     
-    <div class="debug">
-        <h3>Debug Info</h3>
-        <div id="debug-output"></div>
+    <div class="debug-container">
+        <div class="debug-header">
+            <h3>Debug Console</h3>
+            <div class="debug-controls">
+                <button id="copy-debug">Copy Logs</button>
+                <button id="clear-debug">Clear Logs</button>
+                <button id="toggle-verbose">Toggle Verbose</button>
+            </div>
+        </div>
+        <div id="debug-output" class="debug-output"></div>
     </div>
 
     <script type="importmap">
