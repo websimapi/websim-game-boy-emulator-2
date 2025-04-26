@@ -295,33 +295,215 @@ export class GameBoy {
         }
     }
     
-    // CPU instruction execution (simplified for brevity)
+    // CPU instruction execution (with improved error handling)
     executeInstruction() {
         // Fetch opcode
         const opcode = this.readByte(this.pc++);
         
-        // Execute instruction
-        switch (opcode) {
-            // NOP
-            case 0x00:
-                // No operation
-                return 4;
-            
-            // LD instructions
-            case 0x06: // LD B, n
-                this.b = this.readByte(this.pc++);
-                return 8;
+        // Track cycles this instruction takes
+        let cycles = 0;
+        
+        try {
+            // Execute instruction
+            switch (opcode) {
+                // NOP
+                case 0x00:
+                    // No operation
+                    cycles = 4;
+                    break;
                 
-            case 0x0E: // LD C, n
-                this.c = this.readByte(this.pc++);
-                return 8;
+                // LD instructions
+                case 0x06: // LD B, n
+                    this.b = this.readByte(this.pc++);
+                    cycles = 8;
+                    break;
+                    
+                case 0x0E: // LD C, n
+                    this.c = this.readByte(this.pc++);
+                    cycles = 8;
+                    break;
                 
-            // More instructions would be implemented here...
+                case 0x16: // LD D, n
+                    this.d = this.readByte(this.pc++);
+                    cycles = 8;
+                    break;
                 
-            default:
-                console.warn(`Unknown opcode: 0x${opcode.toString(16)}`);
-                return 4;
+                case 0x1E: // LD E, n
+                    this.e = this.readByte(this.pc++);
+                    cycles = 8;
+                    break;
+                
+                case 0x26: // LD H, n
+                    this.h = this.readByte(this.pc++);
+                    cycles = 8;
+                    break;
+                
+                case 0x2E: // LD L, n
+                    this.l = this.readByte(this.pc++);
+                    cycles = 8;
+                    break;
+                
+                case 0x3E: // LD A, n
+                    this.a = this.readByte(this.pc++);
+                    cycles = 8;
+                    break;
+                
+                // 16-bit loads
+                case 0x01: // LD BC, nn
+                    this.c = this.readByte(this.pc++);
+                    this.b = this.readByte(this.pc++);
+                    cycles = 12;
+                    break;
+                
+                case 0x11: // LD DE, nn
+                    this.e = this.readByte(this.pc++);
+                    this.d = this.readByte(this.pc++);
+                    cycles = 12;
+                    break;
+                
+                case 0x21: // LD HL, nn
+                    this.l = this.readByte(this.pc++);
+                    this.h = this.readByte(this.pc++);
+                    cycles = 12;
+                    break;
+                
+                case 0x31: // LD SP, nn
+                    this.sp = this.readWord(this.pc);
+                    this.pc += 2;
+                    cycles = 12;
+                    break;
+                
+                // PUSH instructions
+                case 0xC5: // PUSH BC
+                    this.sp -= 2;
+                    this.writeWord(this.sp, (this.b << 8) | this.c);
+                    cycles = 16;
+                    break;
+                
+                case 0xD5: // PUSH DE
+                    this.sp -= 2;
+                    this.writeWord(this.sp, (this.d << 8) | this.e);
+                    cycles = 16;
+                    break;
+                
+                case 0xE5: // PUSH HL
+                    this.sp -= 2;
+                    this.writeWord(this.sp, (this.h << 8) | this.l);
+                    cycles = 16;
+                    break;
+                
+                case 0xF5: // PUSH AF
+                    this.sp -= 2;
+                    this.writeWord(this.sp, (this.a << 8) | this.f);
+                    cycles = 16;
+                    break;
+                
+                // POP instructions
+                case 0xC1: // POP BC
+                    this.c = this.readByte(this.sp++);
+                    this.b = this.readByte(this.sp++);
+                    cycles = 12;
+                    break;
+                
+                case 0xD1: // POP DE
+                    this.e = this.readByte(this.sp++);
+                    this.d = this.readByte(this.sp++);
+                    cycles = 12;
+                    break;
+                
+                case 0xE1: // POP HL
+                    this.l = this.readByte(this.sp++);
+                    this.h = this.readByte(this.sp++);
+                    cycles = 12;
+                    break;
+                
+                case 0xF1: // POP AF
+                    this.f = this.readByte(this.sp++) & 0xF0; // Lower 4 bits always 0
+                    this.a = this.readByte(this.sp++);
+                    cycles = 12;
+                    break;
+                
+                // Jump instructions
+                case 0xC3: // JP nn
+                    this.pc = this.readWord(this.pc);
+                    cycles = 16;
+                    break;
+                
+                // Call instructions
+                case 0xCD: // CALL nn
+                    {
+                        const address = this.readWord(this.pc);
+                        this.pc += 2;
+                        this.sp -= 2;
+                        this.writeWord(this.sp, this.pc);
+                        this.pc = address;
+                        cycles = 24;
+                    }
+                    break;
+                
+                // Return instructions
+                case 0xC9: // RET
+                    this.pc = this.readWord(this.sp);
+                    this.sp += 2;
+                    cycles = 16;
+                    break;
+                
+                // HALT
+                case 0x76:
+                    this.halted = true;
+                    cycles = 4;
+                    break;
+                
+                // Enable/disable interrupts
+                case 0xFB: // EI
+                    this.interruptsEnabled = true;
+                    cycles = 4;
+                    break;
+                
+                case 0xF3: // DI
+                    this.interruptsEnabled = false;
+                    cycles = 4;
+                    break;
+                
+                // 8-bit ALU
+                case 0x80: // ADD A, B
+                    this.addA(this.b);
+                    cycles = 4;
+                    break;
+                
+                case 0x81: // ADD A, C
+                    this.addA(this.c);
+                    cycles = 4;
+                    break;
+                
+                // Default case for unimplemented opcodes
+                default:
+                    console.warn(`Unhandled opcode: 0x${opcode.toString(16).padStart(2, '0')} at PC: 0x${(this.pc - 1).toString(16).padStart(4, '0')}`);
+                    // Return a default cycle count to keep emulation running
+                    cycles = 4;
+                    break;
+            }
+        } catch (error) {
+            console.error(`Error executing opcode 0x${opcode.toString(16).padStart(2, '0')} at PC: 0x${(this.pc - 1).toString(16).padStart(4, '0')}`);
+            console.error(error);
+            // Return a default cycle count to prevent freezing
+            cycles = 4;
         }
+        
+        return cycles;
+    }
+    
+    // Helper for 8-bit ALU operations
+    addA(value) {
+        const result = this.a + value;
+        
+        // Set flags
+        this.fZero = (result & 0xFF) === 0;
+        this.fSubtract = false;
+        this.fHalfCarry = ((this.a & 0x0F) + (value & 0x0F)) > 0x0F;
+        this.fCarry = result > 0xFF;
+        
+        this.a = result & 0xFF;
     }
     
     // Update timers
@@ -623,4 +805,3 @@ export class GameBoy {
         };
     }
 }
-
