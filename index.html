@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Boy Emulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .gameboy {
+            background-color: #8b8b8b;
+            width: 320px;
+            height: 520px;
+            border-radius: 15px 15px 70px 15px;
+            padding: 20px;
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .screen-container {
+            background-color: #9da194;
+            padding: 20px 30px 40px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .screen {
+            width: 160px;
+            height: 144px;
+            background-color: #0f380f;
+            image-rendering: pixelated;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        .dpad {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            align-self: flex-start;
+            margin-left: 20px;
+        }
+        .dpad button {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #2f2f2f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .dpad .up { top: 0; left: 35px; }
+        .dpad .right { top: 35px; right: 0; }
+        .dpad .down { bottom: 0; left: 35px; }
+        .dpad .left { top: 35px; left: 0; }
+        
+        .action-buttons {
+            display: flex;
+            align-self: flex-end;
+            margin-right: 20px;
+        }
+        .action-buttons button {
+            width: 40px;
+            height: 40px;
+            background-color: #9c3452;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            margin: 0 10px;
+        }
+        .menu-buttons {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .menu-buttons button {
+            width: 60px;
+            height: 20px;
+            background-color: #2f2f2f;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            margin: 0 10px;
+            transform: rotate(-30deg);
+        }
+        .file-input {
+            margin-top: 20px;
+        }
+        .debug {
+            margin-top: 20px;
+            width: 100%;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Game Boy Emulator</h1>
+    
+    <div class="gameboy">
+        <div class="screen-container">
+            <canvas id="screen" class="screen" width="160" height="144"></canvas>
+        </div>
+        
+        <div class="controls">
+            <div class="dpad">
+                <button class="up" id="btn-up">▲</button>
+                <button class="right" id="btn-right">▶</button>
+                <button class="down" id="btn-down">▼</button>
+                <button class="left" id="btn-left">◀</button>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="btn-b">B</button>
+                <button id="btn-a">A</button>
+            </div>
+            
+            <div class="menu-buttons">
+                <button id="btn-select">SELECT</button>
+                <button id="btn-start">START</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="file-input">
+        <input type="file" id="rom-input" accept=".gb">
+        <button id="start-btn">Start Game</button>
+        <button id="pause-btn">Pause</button>
+        <button id="reset-btn">Reset</button>
+    </div>
+    
+    <div class="debug">
+        <h3>Debug Info</h3>
+        <div id="debug-output"></div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+        }
+    }
+    </script>
+    <script src="main.js" type="module"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
