@@ -160,4 +160,3 @@ function updateDebugInfo() {
         LCD Status: ${debugInfo.lcdStatus}
     `;
 }
-
