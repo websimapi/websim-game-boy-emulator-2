@@ -62,6 +62,7 @@ class WebGLRenderer {
         
         this.initGL();
         this.createTexture();
+        Debug.info('WebGL renderer initialized successfully');
     }
     
     initGL() {
@@ -166,7 +167,15 @@ class WebGLRenderer {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         
-        // Initialize with empty image
+        // Initialize with empty image (green background)
+        const emptyData = new Uint8Array(160 * 144 * 4);
+        for (let i = 0; i < emptyData.length; i += 4) {
+            emptyData[i] = 155;     // R
+            emptyData[i + 1] = 188;  // G
+            emptyData[i + 2] = 15;   // B
+            emptyData[i + 3] = 255;  // A
+        }
+        
         gl.texImage2D(
             gl.TEXTURE_2D,
             0,
@@ -176,7 +185,7 @@ class WebGLRenderer {
             0,
             gl.RGBA,
             gl.UNSIGNED_BYTE,
-            null
+            emptyData
         );
     }
     
@@ -243,7 +252,6 @@ function handleRomFileSelect(e) {
         // Initialize WebGL renderer
         try {
             glRenderer = new WebGLRenderer(gameCanvas);
-            Debug.info('WebGL renderer initialized successfully');
         } catch (error) {
             Debug.error(`Failed to initialize WebGL: ${error.message}`);
             Debug.warn('Falling back to Canvas 2D renderer');

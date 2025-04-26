@@ -4,6 +4,7 @@ import { Memory } from './memory.js';
 import { PPU } from './ppu.js';
 import { Timer } from './timer.js';
 import { Interrupts } from './interrupts.js';
+import { Input } from './input.js';
 
 // Constants for GameBoy hardware
 const CLOCK_SPEED = 4194304; // Hz
@@ -47,6 +48,9 @@ self.onmessage = function(e) {
     case 'start':
       if (gameboy) {
         isRunning = true;
+        lastFrameTime = performance.now();
+        fpsCounter = 0;
+        fpsTimer = 0;
         startEmulationLoop();
         self.postMessage({ type: 'started' });
       } else {
@@ -97,31 +101,7 @@ self.onmessage = function(e) {
 // Initialize the GameBoy emulator
 function initGameboy(romData) {
   const interrupts = new Interrupts();
-  const input = {
-    buttonStates: {
-      up: false,
-      down: false,
-      left: false,
-      right: false,
-      a: false,
-      b: false,
-      start: false,
-      select: false
-    },
-    buttonDown(button) {
-      if (button in this.buttonStates) {
-        this.buttonStates[button] = true;
-      }
-    },
-    buttonUp(button) {
-      if (button in this.buttonStates) {
-        this.buttonStates[button] = false;
-      }
-    },
-    isButtonPressed(button) {
-      return button in this.buttonStates ? this.buttonStates[button] : false;
-    }
-  };
+  const input = new Input();
   
   const memory = new Memory(romData, interrupts, input);
   interrupts.memory = memory;
@@ -148,17 +128,17 @@ function initGameboy(romData) {
     },
     
     render() {
-      // Just send the frame buffer to the main thread
+      // Clone the buffer before sending it
+      const bufferCopy = frameBuffer.slice();
+      
+      // Send the frame buffer to the main thread
       self.postMessage({ 
         type: 'frame', 
         data: { 
-          buffer: frameBuffer.buffer,
+          buffer: bufferCopy.buffer,
           fps: currentFps
         }
-      }, [frameBuffer.buffer]); // Transfer the buffer to avoid copying
-      
-      // After transfer, we need to recreate the buffer
-      frameBuffer = new Uint8Array(160 * 144 * 4);
+      }, [bufferCopy.buffer]); // Transfer the buffer to avoid copying
     },
     
     clear() {
@@ -207,6 +187,7 @@ function initGameboy(romData) {
         
         return cycles;
       } catch (error) {
+        console.error("Emulation error:", error);
         throw error;
       }
     },
@@ -218,10 +199,15 @@ function initGameboy(romData) {
       while (cyclesThisFrame < CYCLES_PER_FRAME) {
         const stepCycles = this.step();
         cyclesThisFrame += stepCycles;
+        
+        // Safety check to prevent infinite loops
+        if (stepCycles <= 0) {
+          console.error("Invalid cycle count:", stepCycles);
+          break;
+        }
       }
       
-      // After the frame is complete, render the screen
-      workerRenderer.render();
+      // The frame is rendered in the PPU when V-blank is reached
     },
     
     getDebugInfo() {
@@ -255,6 +241,9 @@ function resetGameboy() {
   if (gameboy) {
     gameboy.cpu.initializeRegisters();
     gameboy.memory.initializeMemory();
+    
+    // Also clear the screen
+    gameboy.ppu.renderer.clear();
     
     // Stop and restart emulation if it was running
     const wasRunning = isRunning;
@@ -298,8 +287,14 @@ function sendDebugInfo() {
     0xC9: "RET",
     0xCD: "CALL nn",
     0xF3: "DI",
-    0xFB: "EI"
-    // More would be added in a real implementation
+    0xFB: "EI",
+    0xAF: "XOR A",
+    0xE0: "LDH (n),A",
+    0xF0: "LDH A,(n)",
+    0xFA: "LD A,(nn)",
+    0x1B: "DEC DE",
+    0xD5: "PUSH DE",
+    0xCA: "JP Z,nn",
   };
   
   const instructionContext = {
@@ -324,10 +319,6 @@ function startEmulationLoop() {
   const now = performance.now();
   const elapsed = now - lastFrameTime;
   
-  // Calculate time until next frame (aim for 60fps)
-  const frameTime = 1000 / 60; // ~16.67ms for 60fps
-  const delay = Math.max(0, frameTime - (elapsed % frameTime));
-  
   try {
     // Run a frame of emulation
     gameboy.runFrame();
@@ -344,7 +335,12 @@ function startEmulationLoop() {
       sendDebugInfo();
     }
     
-    // Schedule next frame with timing to maintain target framerate
+    // Calculate time until next frame (aim for 60fps)
+    const frameTime = 1000 / 60; // ~16.67ms for 60fps
+    const timeTaken = performance.now() - now;
+    const delay = Math.max(0, frameTime - timeTaken);
+    
+    // Schedule next frame
     lastFrameTime = now;
     frameId = setTimeout(startEmulationLoop, delay);
     
