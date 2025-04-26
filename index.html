@@ -30,12 +30,23 @@
             padding: 20px 30px 40px 30px;
             border-radius: 10px;
             margin-bottom: 20px;
+            position: relative;
         }
         .screen {
             width: 160px;
             height: 144px;
             background-color: #0f380f;
             image-rendering: pixelated;
+        }
+        .fps-display {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 12px;
         }
         .controls {
             display: flex;
@@ -58,6 +69,13 @@
             color: white;
             border: none;
             border-radius: 5px;
+            cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .dpad button:active {
+            background-color: #555;
         }
         .dpad .up { top: 0; left: 35px; }
         .dpad .right { top: 35px; right: 0; }
@@ -77,6 +95,13 @@
             border: none;
             border-radius: 50%;
             margin: 0 10px;
+            cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .action-buttons button:active {
+            background-color: #c14b6e;
         }
         .menu-buttons {
             display: flex;
@@ -92,9 +117,31 @@
             border-radius: 10px;
             margin: 0 10px;
             transform: rotate(-30deg);
+            cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .menu-buttons button:active {
+            background-color: #555;
         }
         .file-input {
             margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+        .file-input button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .file-input button:hover {
+            background-color: #45a049;
         }
         .debug-container {
             margin-top: 20px;
@@ -154,6 +201,7 @@
     <div class="gameboy">
         <div class="screen-container">
             <canvas id="screen" class="screen" width="160" height="144"></canvas>
+            <div id="fps-counter" class="fps-display">0 FPS</div>
         </div>
         
         <div class="controls">
